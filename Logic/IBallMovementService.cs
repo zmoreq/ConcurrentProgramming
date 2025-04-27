@@ -4,6 +4,7 @@ namespace ConcurrentProgramming.Logic
 {
     public interface IBallMovementService
     {
-        void MoveBall(IBall ball, IVector velocity);
+        void AddBall(IBall ball);
+        void MoveBalls();
     }
 }

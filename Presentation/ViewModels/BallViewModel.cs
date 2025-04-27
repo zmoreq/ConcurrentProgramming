@@ -1,6 +1,7 @@
-﻿using ConcurrentProgramming.Data;
+﻿using CommunityToolkit.Mvvm.Input;
+using ConcurrentProgramming.Data;
 using ConcurrentProgramming.Logic;
-using GalaSoft.MvvmLight.Command;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Input;
 
@@ -8,27 +9,32 @@ namespace ConcurrentProgramming.Presentation.ViewModels
 {
     public class BallViewModel : INotifyPropertyChanged
     {
-        private readonly IBall _ball;
+        
+
         private readonly IBallMovementService _movementService;
-
-        public IVector BallPosition => _ball.Position;
-
-        public BallViewModel(IBall ball, IBallMovementService movementService)
+        public ObservableCollection<IBall> Balls { get; } = new();
+        
+        public BallViewModel(IBallMovementService movementService)
         {
-            _ball = ball;
             _movementService = movementService;
+            
         }
+        public ICommand AddBallCommand => new RelayCommand(AddBall);
 
-        public ICommand MoveBallCommand => new RelayCommand(MoveBall);
-
-        private void MoveBall()
+        private void AddBall()
         {
-            var velocity = new Vector(1, 0); // Przykładowa prędkość
-            _movementService.MoveBall(_ball, velocity);
-            OnPropertyChanged(nameof(BallPosition));
-        }
+            var random = new Random();
+            var x = random.Next(0, 700);
+            var y = random.Next(0, 400);
+            var ball = new Ball(new Vector(x, y), 25);
 
-        public event PropertyChangedEventHandler PropertyChanged;
+            Balls.Add(ball);
+            OnPropertyChanged(nameof(Balls));
+            _movementService.AddBall(ball);
+        }
+        
+
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName)
         {

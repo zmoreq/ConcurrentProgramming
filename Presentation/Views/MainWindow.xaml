@@ -1,14 +1,30 @@
-﻿<Window x:Class="ConcurrentProgramming.MainWindow"
+﻿<Window x:Class="ConcurrentProgramming.Presentation.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:concurrentprogramming="clr-namespace:ConcurrentProgramming"
-        Title="Bouncing Balls" Height="450" Width="800">
-
+        Title="Bouncing Balls" Height="auto" Width="auto">
     <Grid>
-        <Button Content="Move Ball" Command="{Binding MoveBallCommand}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Margin="19,22,0,0"/>
-        <Canvas Margin="10,0,-10,0">
-            <Ellipse Width="50" Height="50" Fill="Red" Canvas.Left="375" Canvas.Top="192"/>
-        </Canvas>
+        <Button Content="Add Ball" Command="{Binding AddBallCommand}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Margin="10"/>
+        <Border BorderBrush="Black" BorderThickness="2" Width="800" Height="450" Margin="0,50,0,0">
+            <Canvas Width="800" Height="450">
+                <ItemsControl ItemsSource="{Binding Balls}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Ellipse Width="{Binding Radius}" Height="{Binding Radius}" Fill="Red" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Canvas>
+        </Border>
     </Grid>
 </Window>

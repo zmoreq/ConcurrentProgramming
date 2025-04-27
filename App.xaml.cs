@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using ConcurrentProgramming.Data;
 using ConcurrentProgramming.Logic;
-using ConcurrentProgramming.Presentation;
+using ConcurrentProgramming.Presentation.Views;
 using ConcurrentProgramming.Presentation.ViewModels;
 using Vector = ConcurrentProgramming.Data.Vector;
 
@@ -12,9 +12,8 @@ namespace ConcurrentProgramming
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            var ball = new Ball(new Vector(100, 100), 25);
             var movementService = new BallMovementService();
-            var viewModel = new BallViewModel(ball, movementService);
+            var viewModel = new BallViewModel(movementService);
 
             var mainWindow = new MainWindow
             {
@@ -23,5 +22,6 @@ namespace ConcurrentProgramming
 
             mainWindow.Show();
         }
+
     }
 }

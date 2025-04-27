@@ -1,19 +1,57 @@
-﻿namespace ConcurrentProgramming.Data
+﻿using System.ComponentModel;
+
+namespace ConcurrentProgramming.Data
 {
-    public class Ball : IBall
+    public class Ball : IBall, INotifyPropertyChanged
     {
-        public IVector Position { get; private set; }
+        private float _x;
+        private float _y;
         public float Radius { get; private set; }
+
+        public float X
+        {
+            get => _x;
+            set
+            {
+                if (_x != value)
+                {
+                    _x = value;
+                    OnPropertyChanged(nameof(X));
+                }
+            }
+        }
+
+        public float Y
+        {
+            get => _y;
+            set
+            {
+                if (_y != value)
+                {
+                    _y = value;
+                    OnPropertyChanged(nameof(Y));
+                }
+            }
+        }
 
         public Ball(IVector startPosition, float radius)
         {
-            Position = startPosition;
+            _x = startPosition.X;
+            _y = startPosition.Y;
             Radius = radius;
         }
 
         public void UpdatePosition(IVector velocity)
         {
-            Position = new Vector(Position.X + velocity.X, Position.Y + velocity.Y);
+            X += velocity.X;
+            Y += velocity.Y;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
