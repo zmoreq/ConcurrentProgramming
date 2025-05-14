@@ -1,4 +1,5 @@
 ﻿using ConcurrentProgramming.Data;
+
 namespace ConcurrentProgramming.Logic
 {
     public class BallData

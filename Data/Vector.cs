@@ -1,4 +1,6 @@
-﻿namespace ConcurrentProgramming.Data
+﻿using System;
+
+namespace ConcurrentProgramming.Data
 {
     public class Vector : IVector
     {

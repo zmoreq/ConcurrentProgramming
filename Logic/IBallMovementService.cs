@@ -1,10 +1,12 @@
-﻿using ConcurrentProgramming.Data;
+﻿using System;
+using System.Reactive;
+using ConcurrentProgramming.Data;
 
 namespace ConcurrentProgramming.Logic
 {
     public interface IBallMovementService
     {
         void AddBall(IBall ball);
-        void MoveBalls();
+        IObservable<Unit> PositionChanged { get; }
     }
 }

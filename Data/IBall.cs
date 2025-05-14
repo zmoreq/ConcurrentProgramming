@@ -2,8 +2,8 @@
 {
     public interface IBall
     {
-        float X { get; }
-        float Y { get; }
+        float X { get; set; } // Zmieniamy na get/set
+        float Y { get; set; } // Zmieniamy na get/set
         float Radius { get; }
         void UpdatePosition(IVector velocity);
     }

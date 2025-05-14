@@ -1,43 +1,51 @@
 ﻿using System.ComponentModel;
+using System.Threading;
 
 namespace ConcurrentProgramming.Data
 {
     public class Ball : IBall, INotifyPropertyChanged
     {
+        private readonly object _lock = new object();
         private float _x;
         private float _y;
-        public float Radius { get; private set; }
+        public float Radius { get; }
 
         public float X
         {
-            get => _x;
-            set
+            get { lock (_lock) return _x; }
+            set // Dodajemy setter
             {
-                if (_x != value)
+                lock (_lock)
                 {
-                    _x = value;
-                    OnPropertyChanged(nameof(X));
+                    if (Math.Abs(_x - value) > float.Epsilon)
+                    {
+                        _x = value;
+                        OnPropertyChanged(nameof(X));
+                    }
                 }
             }
         }
 
         public float Y
         {
-            get => _y;
-            set
+            get { lock (_lock) return _y; }
+            set // Dodajemy setter
             {
-                if (_y != value)
+                lock (_lock)
                 {
-                    _y = value;
-                    OnPropertyChanged(nameof(Y));
+                    if (Math.Abs(_y - value) > float.Epsilon)
+                    {
+                        _y = value;
+                        OnPropertyChanged(nameof(Y));
+                    }
                 }
             }
         }
 
         public Ball(IVector startPosition, float radius)
         {
-            _x = startPosition.X;
-            _y = startPosition.Y;
+            X = startPosition.X;
+            Y = startPosition.Y;
             Radius = radius;
         }
 
