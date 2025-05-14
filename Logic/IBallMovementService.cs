@@ -1,6 +1,6 @@
-﻿using System;
+﻿using ConcurrentProgramming.Data;
+using System;
 using System.Reactive;
-using ConcurrentProgramming.Data;
 
 namespace ConcurrentProgramming.Logic
 {
@@ -8,5 +8,6 @@ namespace ConcurrentProgramming.Logic
     {
         void AddBall(IBall ball);
         IObservable<Unit> PositionChanged { get; }
+        void MoveBalls(); // Dodajemy metodę do interfejsu
     }
 }

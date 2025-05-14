@@ -35,7 +35,7 @@ namespace ConcurrentProgramming.Logic
             _balls.TryAdd(ball, new BallData(ball, speedX, speedY));
         }
 
-        private void MoveBalls()
+        public void MoveBalls()
         {
             Parallel.ForEach(_balls.Values, ballData =>
             {
