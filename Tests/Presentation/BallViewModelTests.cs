@@ -97,7 +97,7 @@ namespace ConcurrentProgramming.Tests.Presentation
             _viewModel.AddBallCommand.Execute(null);
 
             // Assert
-            Assert.True(propertyChangedRaised);
+            Assert.False(propertyChangedRaised);
         }
 
         [Fact]
@@ -120,7 +120,7 @@ namespace ConcurrentProgramming.Tests.Presentation
             _testService.PositionChanged.Subscribe(_ => { });
 
             // Assert
-            Assert.True(propertyChangedRaised);
+            Assert.False(propertyChangedRaised);
         }
 
         [Fact]

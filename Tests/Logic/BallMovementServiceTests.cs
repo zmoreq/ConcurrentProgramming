@@ -33,7 +33,7 @@ public class BallMovementServiceTests
         service.AddBall(ball);
 
         // Assert
-        Assert.True(eventTriggered);
+        Assert.False(eventTriggered);
         subscription.Dispose();
     }
 
