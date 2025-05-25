@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Threading;
 using System.Threading.Tasks;
 using ConcurrentProgramming.Data;
 
@@ -16,6 +17,7 @@ namespace ConcurrentProgramming.Logic
         private readonly int _width;
         private readonly int _height;
         private readonly object _collisionLock = new object();
+        private readonly CancellationTokenSource _cts = new();
 
         public IObservable<Unit> PositionChanged => _positionChanged.AsObservable();
 
@@ -23,63 +25,59 @@ namespace ConcurrentProgramming.Logic
         {
             _width = width;
             _height = height;
-
-            Observable.Interval(TimeSpan.FromMilliseconds(16))
-                .Subscribe(_ => MoveBalls());
         }
 
         public void AddBall(IBall ball)
         {
             float speedX = (float)(_random.NextDouble() * 4 - 2);
             float speedY = (float)(_random.NextDouble() * 4 - 2);
-            _balls.TryAdd(ball, new BallData(ball, speedX, speedY));
+            var ballData = new BallData(ball, speedX, speedY);
+            _balls.TryAdd(ball, ballData);
+
+            // Tworzymy osobny Task dla każdej piłki
+            Task.Run(() => MoveBallLoop(ballData, _cts.Token));
         }
 
-        public void MoveBalls()
+        private async Task MoveBallLoop(BallData ballData, CancellationToken token)
         {
-            Parallel.ForEach(_balls.Values, ballData =>
+            while (!token.IsCancellationRequested)
             {
-                ballData.Ball.UpdatePosition(new Vector(ballData.SpeedX, ballData.SpeedY));
+                MoveBall(ballData);
+                CheckCollisions(ballData);
+                _positionChanged.OnNext(Unit.Default);
 
-                // Kolizje z granicami - teraz używamy UpdatePosition
-                if (ballData.Ball.X <= 0)
-                {
-                    ballData.Ball.UpdatePosition(new Vector(-ballData.Ball.X, 0));
-                    ballData.SpeedX = -ballData.SpeedX;
-                }
-                else if (ballData.Ball.X >= _width - ballData.Ball.Radius)
-                {
-                    ballData.Ball.UpdatePosition(new Vector(_width - ballData.Ball.Radius - ballData.Ball.X, 0));
-                    ballData.SpeedX = -ballData.SpeedX;
-                }
+                await Task.Delay(16, token); // 60 FPS
+            }
+        }
 
-                if (ballData.Ball.Y <= 0)
-                {
-                    ballData.Ball.UpdatePosition(new Vector(0, -ballData.Ball.Y));
-                    ballData.SpeedY = -ballData.SpeedY;
-                }
-                else if (ballData.Ball.Y >= _height - ballData.Ball.Radius)
-                {
-                    ballData.Ball.UpdatePosition(new Vector(0, _height - ballData.Ball.Radius - ballData.Ball.Y));
-                    ballData.SpeedY = -ballData.SpeedY;
-                }
-            });
+        private void MoveBall(BallData ballData)
+        {
+            ballData.Ball.UpdatePosition(new Vector(ballData.SpeedX, ballData.SpeedY));
 
-            // Następnie sprawdzaj kolizje między piłkami
-            var ballList = _balls.Values.ToArray();
-            for (int i = 0; i < ballList.Length; i++)
+            if (ballData.Ball.X <= 0)
             {
-                for (int j = i + 1; j < ballList.Length; j++)
-                {
-                    if (CheckCollision(ballList[i], ballList[j]))
-                    {
-                        HandleCollision(ballList[i], ballList[j]);
-                    }
-                }
+                ballData.Ball.UpdatePosition(new Vector(-ballData.Ball.X, 0));
+                ballData.SpeedX = -ballData.SpeedX;
+            }
+            else if (ballData.Ball.X >= _width - ballData.Ball.Radius)
+            {
+                ballData.Ball.UpdatePosition(new Vector(_width - ballData.Ball.Radius - ballData.Ball.X, 0));
+                ballData.SpeedX = -ballData.SpeedX;
             }
 
-            _positionChanged.OnNext(Unit.Default);
+            if (ballData.Ball.Y <= 0)
+            {
+                ballData.Ball.UpdatePosition(new Vector(0, -ballData.Ball.Y));
+                ballData.SpeedY = -ballData.SpeedY;
+            }
+            else if (ballData.Ball.Y >= _height - ballData.Ball.Radius)
+            {
+                ballData.Ball.UpdatePosition(new Vector(0, _height - ballData.Ball.Radius - ballData.Ball.Y));
+                ballData.SpeedY = -ballData.SpeedY;
+            }
         }
+
+        
 
         private bool CheckCollision(BallData a, BallData b)
         {
@@ -89,42 +87,75 @@ namespace ConcurrentProgramming.Logic
             return distance <= (a.Ball.Radius / 2 + b.Ball.Radius / 2);
         }
 
+        private void CheckCollisions(BallData currentBall)
+        {
+            foreach (var otherBallData in _balls.Values)
+            {
+                if (currentBall == otherBallData)
+                    continue;
+
+                // Zasada: tylko piłka z "mniejszym adresem" obsługuje kolizję
+                if (currentBall.GetHashCode() < otherBallData.GetHashCode())
+                {
+                    if (CheckCollision(currentBall, otherBallData))
+                    {
+                        HandleCollision(currentBall, otherBallData);
+                    }
+                }
+            }
+        }
+
         private void HandleCollision(BallData a, BallData b)
         {
             lock (_collisionLock)
             {
-                // Oblicz wektor normalny kolizji
-                float nx = (b.Ball.X - a.Ball.X) / (a.Ball.Radius + b.Ball.Radius);
-                float ny = (b.Ball.Y - a.Ball.Y) / (a.Ball.Radius + b.Ball.Radius);
+                float dx = b.Ball.X - a.Ball.X;
+                float dy = b.Ball.Y - a.Ball.Y;
+                float distance = (float)Math.Sqrt(dx * dx + dy * dy);
+                float minDistance = (a.Ball.Radius + b.Ball.Radius) / 2f;
 
-                // Oblicz względną prędkość
+                if (distance == 0f || distance >= minDistance)
+                    return;
+
+                // Wektor jednostkowy kolizji
+                float nx = dx / distance;
+                float ny = dy / distance;
+
+                // Prędkość względna
                 float dvx = b.SpeedX - a.SpeedX;
                 float dvy = b.SpeedY - a.SpeedY;
 
-                // Oblicz iloczyn skalarny
-                float p = dvx * nx + dvy * ny;
+                // Rzut prędkości względnej na wektor normalny
+                float dotProduct = dvx * nx + dvy * ny;
 
-                if (p > 0) return; // Piłki oddalają się od siebie
+                // Jeśli oddalają się – nie kolidują
+                if (dotProduct > 0)
+                    return;
 
-                // Wymiana prędkości
-                (a.SpeedX, b.SpeedX) = (b.SpeedX, a.SpeedX);
-                (a.SpeedY, b.SpeedY) = (b.SpeedY, a.SpeedY);
+                // Odbicie – zakładamy masy równe
+                float impulse = 2 * dotProduct / 2f; // 2 piłki
 
-                // Minimalne odsunięcie piłek - teraz używamy UpdatePosition zamiast bezpośredniego przypisania
-                float overlap = (a.Ball.Radius + b.Ball.Radius) -
-                              (float)Math.Sqrt(Math.Pow(b.Ball.X - a.Ball.X, 2) +
-                                       Math.Pow(b.Ball.Y - a.Ball.Y, 2));
+                // Zmiana prędkości wzdłuż normalnej
+                a.SpeedX += impulse * nx;
+                a.SpeedY += impulse * ny;
+                b.SpeedX -= impulse * nx;
+                b.SpeedY -= impulse * ny;
 
-                if (overlap > 0)
-                {
-                    float moveX = overlap * nx * 0.5f;
-                    float moveY = overlap * ny * 0.5f;
+                // Odsunięcie – żeby nie nakładały się
+                float overlap = minDistance - distance;
+                float correctionX = nx * overlap / 2;
+                float correctionY = ny * overlap / 2;
 
-                    // Używamy UpdatePosition zamiast bezpośredniego przypisania
-                    a.Ball.UpdatePosition(new Vector(-moveX, -moveY));
-                    b.Ball.UpdatePosition(new Vector(moveX, moveY));
-                }
+                a.Ball.UpdatePosition(new Vector(-correctionX, -correctionY));
+                b.Ball.UpdatePosition(new Vector(correctionX, correctionY));
             }
+        }
+
+
+
+        public void StopAll()
+        {
+            _cts.Cancel();
         }
     }
 }

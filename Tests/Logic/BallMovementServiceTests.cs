@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reactive.Linq;
+using System.Threading.Tasks;
 using ConcurrentProgramming.Data;
 using ConcurrentProgramming.Logic;
 using Xunit;
@@ -21,34 +22,36 @@ public class BallMovementServiceTests
     }
 
     [Fact]
-    public void AddBall_ShouldTriggerPositionChanged()
+    public async Task AddBall_ShouldEventuallyTriggerPositionChanged()
     {
         // Arrange
         var service = new BallMovementService(800, 450);
         var ball = new TestBall();
         bool eventTriggered = false;
-        var subscription = service.PositionChanged.Subscribe(_ => eventTriggered = true);
+
+        using var subscription = service.PositionChanged.Subscribe(_ => eventTriggered = true);
 
         // Act
         service.AddBall(ball);
+        await Task.Delay(50); // Poczekaj aż zdąży się ruszyć
 
         // Assert
-        Assert.False(eventTriggered);
-        subscription.Dispose();
+        Assert.True(eventTriggered);
     }
 
     [Fact]
-    public void MoveBalls_ShouldChangePosition()
+    public async Task Ball_ShouldChangePositionAfterSomeTime()
     {
         // Arrange
         var service = new BallMovementService(800, 450);
         var ball = new TestBall { X = 100, Y = 100 };
         service.AddBall(ball);
+
         float initialX = ball.X;
         float initialY = ball.Y;
 
         // Act
-        service.MoveBalls(); // Teraz możemy wywołać tę metodę
+        await Task.Delay(50); // Poczekaj na co najmniej jeden tick ruchu
 
         // Assert
         Assert.NotEqual(initialX, ball.X);
@@ -56,20 +59,21 @@ public class BallMovementServiceTests
     }
 
     [Fact]
-    public void MoveBalls_ShouldTriggerPositionChanged()
+    public async Task MoveBall_ShouldTriggerPositionChanged()
     {
         // Arrange
         var service = new BallMovementService(800, 450);
         var ball = new TestBall();
-        service.AddBall(ball);
         bool eventTriggered = false;
-        var subscription = service.PositionChanged.Subscribe(_ => eventTriggered = true);
+
+        using var subscription = service.PositionChanged.Subscribe(_ => eventTriggered = true);
+
+        service.AddBall(ball);
 
         // Act
-        service.MoveBalls();
+        await Task.Delay(50);
 
         // Assert
         Assert.True(eventTriggered);
-        subscription.Dispose();
     }
 }
