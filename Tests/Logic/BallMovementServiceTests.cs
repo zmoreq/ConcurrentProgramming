@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Reactive.Linq;
-using System.Threading.Tasks;
+using System.ComponentModel;
+using System.Threading;
 using ConcurrentProgramming.Data;
 using ConcurrentProgramming.Logic;
 using Xunit;
@@ -13,67 +13,57 @@ public class BallMovementServiceTests
     {
         public float X { get; set; }
         public float Y { get; set; }
-        public float Radius { get; } = 10;
+        public float Radius { get; }
+
+        public TestBall(float x, float y, float radius)
+        {
+            X = x;
+            Y = y;
+            Radius = radius;
+        }
+
         public void UpdatePosition(IVector velocity)
         {
             X += velocity.X;
             Y += velocity.Y;
         }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+    }
+
+   
+
+    [Fact]
+    public void Ball_IsMovedAfterAdd()
+    {
+        var service = new BallMovementService(500, 500);
+        var ball = new TestBall(50, 50, 10);
+
+        service.AddBall(ball);
+        Thread.Sleep(100);
+        service.StopAll();
+
+        Assert.NotEqual(50, ball.X);
+        Assert.NotEqual(50, ball.Y);
     }
 
     [Fact]
-    public async Task AddBall_ShouldEventuallyTriggerPositionChanged()
+    public void HandleCollision_ChangesSpeed()
     {
-        // Arrange
-        var service = new BallMovementService(800, 450);
-        var ball = new TestBall();
-        bool eventTriggered = false;
+        var service = new BallMovementService(500, 500);
 
-        using var subscription = service.PositionChanged.Subscribe(_ => eventTriggered = true);
+        var ball1 = new TestBall(100, 100, 10);
+        var ball2 = new TestBall(108, 100, 10);
 
-        // Act
-        service.AddBall(ball);
-        await Task.Delay(50); // Poczekaj aż zdąży się ruszyć
+        var data1 = new BallData(ball1, 2, 0);
+        var data2 = new BallData(ball2, -2, 0);
 
-        // Assert
-        Assert.True(eventTriggered);
-    }
+        var method = typeof(BallMovementService)
+            .GetMethod("HandleCollision", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-    [Fact]
-    public async Task Ball_ShouldChangePositionAfterSomeTime()
-    {
-        // Arrange
-        var service = new BallMovementService(800, 450);
-        var ball = new TestBall { X = 100, Y = 100 };
-        service.AddBall(ball);
+        method!.Invoke(service, new object[] { data1, data2 });
 
-        float initialX = ball.X;
-        float initialY = ball.Y;
-
-        // Act
-        await Task.Delay(50); // Poczekaj na co najmniej jeden tick ruchu
-
-        // Assert
-        Assert.NotEqual(initialX, ball.X);
-        Assert.NotEqual(initialY, ball.Y);
-    }
-
-    [Fact]
-    public async Task MoveBall_ShouldTriggerPositionChanged()
-    {
-        // Arrange
-        var service = new BallMovementService(800, 450);
-        var ball = new TestBall();
-        bool eventTriggered = false;
-
-        using var subscription = service.PositionChanged.Subscribe(_ => eventTriggered = true);
-
-        service.AddBall(ball);
-
-        // Act
-        await Task.Delay(50);
-
-        // Assert
-        Assert.True(eventTriggered);
+        Assert.True(data1.SpeedX < 2);
+        Assert.True(data2.SpeedX > -2);
     }
 }

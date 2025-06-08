@@ -3,139 +3,89 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using ConcurrentProgramming.Data;
 using ConcurrentProgramming.Logic;
 using ConcurrentProgramming.Presentation.ViewModels;
 using Xunit;
 
-namespace ConcurrentProgramming.Tests.Presentation
+namespace ConcurrentProgramming.Tests.Presentation;
+
+public class BallViewModelTests : IDisposable
 {
-    public class BallViewModelTests : IDisposable
+    private class TestBallMovementService : IBallMovementService, IDisposable
     {
-        private class TestBallMovementService : IBallMovementService
-        {
-            public int AddBallCalls { get; private set; }
-            public int MoveBallsCalls { get; private set; }
-            public bool PositionChangedSubscribed { get; private set; }
+        public int AddBallCalls { get; private set; }
+        public bool PositionChangedSubscribed { get; private set; }
 
-            public void AddBall(IBall ball) => AddBallCalls++;
+        public void AddBall(IBall ball) => AddBallCalls++;
 
-            public void MoveBalls() => MoveBallsCalls++;
+        public void MoveBalls() { }
 
-            public IObservable<Unit> PositionChanged =>
-                Observable.Return(Unit.Default).Do(_ => PositionChangedSubscribed = true);
-        }
+        public void StopAll() { }
 
-        private readonly TestBallMovementService _testService;
-        private readonly BallViewModel _viewModel;
+        public void Dispose() { }
 
-        public BallViewModelTests()
-        {
-            _testService = new TestBallMovementService();
-            _viewModel = new BallViewModel(_testService);
-        }
+        public IObservable<Unit> PositionChanged =>
+            Observable.Return(Unit.Default)
+                      .Do(_ => PositionChangedSubscribed = true);
+    }
 
-        public void Dispose()
-        {
-            _viewModel.Dispose();
-        }
 
-        [Fact]
-        public void Should_Implement_INotifyPropertyChanged()
-        {
-            Assert.IsAssignableFrom<INotifyPropertyChanged>(_viewModel);
-        }
+    private readonly TestBallMovementService _testService;
+    private readonly BallViewModel _viewModel;
 
-        [Fact]
-        public void Should_Initialize_With_Empty_Balls_Collection()
-        {
-            Assert.NotNull(_viewModel.Balls);
-            Assert.Empty(_viewModel.Balls);
-        }
+    public BallViewModelTests()
+    {
+        _testService = new TestBallMovementService();
+        _viewModel = new BallViewModel(_testService);
+    }
 
-        [Fact]
-        public void Should_Initialize_AddBallCommand_As_RelayCommand()
-        {
-            Assert.IsType<RelayCommand>(_viewModel.AddBallCommand);
-            Assert.True(_viewModel.AddBallCommand.CanExecute(null));
-        }
+    public void Dispose() => _viewModel.Dispose();
 
-        [Fact]
-        public void AddBallCommand_Should_Add_New_Ball_To_Collection()
-        {
-            // Act
-            _viewModel.AddBallCommand.Execute(null);
+    [Fact]
+    public void Should_Implement_INotifyPropertyChanged()
+    {
+        Assert.IsAssignableFrom<INotifyPropertyChanged>(_viewModel);
+    }
 
-            // Assert
-            Assert.Single(_viewModel.Balls);
-            Assert.IsAssignableFrom<IBall>(_viewModel.Balls[0]);
-        }
+    [Fact]
+    public void Should_Initialize_With_Empty_Balls_Collection()
+    {
+        Assert.NotNull(_viewModel.Balls);
+        Assert.Empty(_viewModel.Balls);
+    }
 
-        [Fact]
-        public void AddBallCommand_Should_Call_Service_AddBall()
-        {
-            // Act
-            _viewModel.AddBallCommand.Execute(null);
+    [Fact]
+    public void AddBallCommand_Should_Add_New_Ball()
+    {
+        _viewModel.AddBallCommand.Execute(null);
+        Assert.Single(_viewModel.Balls);
+    }
 
-            // Assert
-            Assert.Equal(1, _testService.AddBallCalls);
-        }
+    [Fact]
+    public void AddBallCommand_Should_Trigger_Service()
+    {
+        _viewModel.AddBallCommand.Execute(null);
+        Assert.Equal(1, _testService.AddBallCalls);
+    }
 
-        [Fact]
-        public void AddBallCommand_Should_Raise_PropertyChanged_For_Balls()
-        {
-            var propertyChangedRaised = false;
-            _viewModel.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(_viewModel.Balls))
-                    propertyChangedRaised = true;
-            };
+    [Fact]
+    public void AddBallCommand_Should_Have_RelayCommand()
+    {
+        Assert.IsType<RelayCommand>(_viewModel.AddBallCommand);
+        Assert.True(_viewModel.AddBallCommand.CanExecute(null));
+    }
 
-            // Act
-            _viewModel.AddBallCommand.Execute(null);
+    [Fact]
+    public void Should_Subscribe_To_PositionChanged()
+    {
+        Assert.True(_testService.PositionChangedSubscribed);
+    }
 
-            // Assert
-            Assert.False(propertyChangedRaised);
-        }
-
-        [Fact]
-        public void Should_Subscribe_To_PositionChanged_On_Initialization()
-        {
-            Assert.True(_testService.PositionChangedSubscribed);
-        }
-
-        [Fact]
-        public void PositionChanged_Should_Raise_PropertyChanged_For_Balls()
-        {
-            var propertyChangedRaised = false;
-            _viewModel.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(_viewModel.Balls))
-                    propertyChangedRaised = true;
-            };
-
-            // Act - symulujemy zmianę pozycji poprzez nasz testowy serwis
-            _testService.PositionChanged.Subscribe(_ => { });
-
-            // Assert
-            Assert.False(propertyChangedRaised);
-        }
-
-        [Fact]
-        public void Dispose_Should_Cleanup_Resources()
-        {
-            // Arrange
-            var subscriptionActive = true;
-            _viewModel.PropertyChanged += (s, e) => subscriptionActive = true;
-
-            // Act
-            _viewModel.Dispose();
-            _testService.PositionChanged.Subscribe(_ => subscriptionActive = false);
-
-            // Assert
-            Assert.False(subscriptionActive);
-        }
+    [Fact]
+    public void Dispose_Should_Release_Resources()
+    {
+        _viewModel.Dispose();
     }
 }

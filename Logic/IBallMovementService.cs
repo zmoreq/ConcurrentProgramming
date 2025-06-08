@@ -4,10 +4,10 @@ using System.Reactive;
 
 namespace ConcurrentProgramming.Logic
 {
-    public interface IBallMovementService
+    public interface IBallMovementService : IDisposable
     {
-        void AddBall(IBall ball);
         IObservable<Unit> PositionChanged { get; }
-        //void MoveBalls(); // Dodajemy metodę do interfejsu
+        void AddBall(IBall ball);
+        void StopAll();
     }
 }

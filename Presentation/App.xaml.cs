@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System;
+using System.IO;
+using System.Windows;
 using ConcurrentProgramming.Data;
 using ConcurrentProgramming.Logic;
 using ConcurrentProgramming.Presentation.ViewModels;
@@ -8,6 +10,7 @@ namespace ConcurrentProgramming
 {
     public partial class App : Application
     {
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -22,5 +25,7 @@ namespace ConcurrentProgramming
 
             mainWindow.Show();
         }
+
+      
     }
 }

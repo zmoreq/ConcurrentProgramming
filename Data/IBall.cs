@@ -1,9 +1,11 @@
-﻿namespace ConcurrentProgramming.Data
+﻿using System.ComponentModel;
+
+namespace ConcurrentProgramming.Data
 {
-    public interface IBall
+    public interface IBall : INotifyPropertyChanged
     {
-        float X { get; set; } // Zmieniamy na get/set
-        float Y { get; set; } // Zmieniamy na get/set
+        float X { get; set; }
+        float Y { get; set; }
         float Radius { get; }
         void UpdatePosition(IVector velocity);
     }

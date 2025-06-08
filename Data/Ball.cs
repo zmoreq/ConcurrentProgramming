@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace ConcurrentProgramming.Data
 {
-    public class Ball : IBall, INotifyPropertyChanged
+    public class Ball : IBall
     {
         private readonly object _lock = new object();
         private float _x;
@@ -13,7 +13,7 @@ namespace ConcurrentProgramming.Data
         public float X
         {
             get { lock (_lock) return _x; }
-            set // Dodajemy setter
+            set
             {
                 lock (_lock)
                 {
@@ -29,7 +29,7 @@ namespace ConcurrentProgramming.Data
         public float Y
         {
             get { lock (_lock) return _y; }
-            set // Dodajemy setter
+            set
             {
                 lock (_lock)
                 {

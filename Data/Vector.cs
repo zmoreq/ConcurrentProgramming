@@ -18,6 +18,7 @@ namespace ConcurrentProgramming.Data
         public IVector Normalize()
         {
             var length = Length;
+            if (length == 0) return new Vector(0, 0);
             return new Vector(X / length, Y / length);
         }
     }
